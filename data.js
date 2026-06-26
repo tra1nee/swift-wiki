@@ -742,6 +742,434 @@ const WIKI_DATA = [
     code: "// ООП:        class Car { func drive() {} }\n// Функционально: nums.map { $0 * 2 }",
     when: "Понимание подходов; выбор стиля под задачу.",
     gotcha: "Не противопоставляй жёстко — в Swift их сочетают.", quiz: "архитектура"
+  },
+
+  // ═══ ФАЗА 1 — SWIFT (доп.) ═══
+  {
+    id: "property-wrappers", title: "Property Wrappers (@propertyWrapper)", phase: "p1",
+    category: "Основы", tags: ["property wrapper", "@State", "@Published", "обёртка свойства"],
+    summary: "Обёртка над свойством с доп. логикой. На них построены @State, @Published.",
+    body: "Property wrapper инкапсулирует логику доступа к свойству. Ты пишешь <code>@MyWrapper var x</code>, а обёртка управляет хранением/валидацией. Так устроены <code>@State</code>, <code>@Published</code>, <code>@AppStorage</code>.",
+    code: "@propertyWrapper struct Clamped {\n  var value: Int\n  var wrappedValue: Int { get { value } set { value = max(0, newValue) } }\n}",
+    when: "Переиспользуемая логика свойств (валидация, хранение).",
+    gotcha: "Понимать, что @State и т.п. — это property wrappers, а не магия.", quiz: "синтаксис"
+  },
+  {
+    id: "result-type", title: "Result<Success, Failure>", phase: "p1",
+    category: "Ошибки", tags: ["Result", "success", "failure", "обработка ошибок"],
+    summary: "Тип «успех или ошибка» одним значением. Частый в колбэках.",
+    body: "<code>Result</code> хранит либо <code>.success(value)</code>, либо <code>.failure(error)</code>. Удобен в completion-хендлерах (до async/await). Разбирается через switch.",
+    code: "func load(_ done: (Result<Data, Error>) -> Void) {}\nswitch result {\ncase .success(let data): print(data)\ncase .failure(let err): print(err)\n}",
+    when: "Колбэки, где нужно вернуть успех ИЛИ ошибку.",
+    gotcha: "С async/await чаще просто try/await; Result — для старых колбэков.", quiz: "error handling"
+  },
+  {
+    id: "defer", title: "defer — отложенное выполнение", phase: "p1",
+    category: "Управление потоком", tags: ["defer", "очистка", "cleanup"],
+    summary: "Блок, который выполнится при выходе из области (в любом случае).",
+    body: "<code>defer { ... }</code> выполняется, когда управление покидает текущую область (в т.ч. при ошибке/return). Удобно для гарантированной очистки (закрыть файл, освободить ресурс).",
+    code: "func work() {\n  let file = open()\n  defer { file.close() }   // закроется в любом случае\n  // ... работа\n}",
+    when: "Гарантированная очистка ресурсов.",
+    gotcha: "Несколько defer выполняются в обратном порядке.", quiz: "error handling"
+  },
+  {
+    id: "lazy-props", title: "lazy-свойства", phase: "p1",
+    category: "Типы", tags: ["lazy", "ленивые свойства", "оптимизация"],
+    summary: "Свойство вычисляется один раз при первом обращении, не раньше.",
+    body: "<code>lazy var</code> откладывает вычисление до первого использования. Полезно для «дорогих» свойств, которые нужны не всегда. Только у var, не у let.",
+    code: "class VM {\n  lazy var formatter: DateFormatter = makeExpensiveFormatter()\n}",
+    when: "Дорогие в создании свойства, нужные не всегда.",
+    gotcha: "Не потокобезопасно: ленивое свойство нельзя инициализировать из разных потоков.", quiz: "struct vs class"
+  },
+  {
+    id: "keypaths", title: "KeyPath (\\.property)", phase: "p1",
+    category: "Основы", tags: ["KeyPath", "keypath", "\\.", "идентификатор свойства"],
+    summary: "Ссылка на свойство как на значение: \\.name. Часто в map и SwiftUI.",
+    body: "KeyPath — типобезопасная ссылка на свойство. Пишется <code>\\.property</code>. Используется в <code>map(\\.name)</code>, сортировках, <code>Identifiable(id: \\.self)</code>, SwiftUI.",
+    code: "let names = drivers.map(\\.name)\nlet sorted = races.sorted(using: KeyPathComparator(\\.date))",
+    when: "Доступ к свойству как к значению (map, сортировка, SwiftUI).",
+    gotcha: "Это не строка — компилятор проверяет существование свойства.", quiz: "синтаксис"
+  },
+
+  // ═══ ФАЗА 2 — SWIFTUI (доп.) ═══
+  {
+    id: "environment", title: "@Environment и @EnvironmentObject", phase: "p2",
+    category: "SwiftUI", tags: ["@Environment", "@EnvironmentObject", "проброс", "DI"],
+    summary: "Прокидывание данных/настроек вглубь дерева без передачи вручную.",
+    body: "<code>@Environment</code> читает системные значения (тема, размер, dismiss). <code>@EnvironmentObject</code> — общий ObservableObject, переданный через <code>.environmentObject()</code>, доступный любому потомку без ручного проброса.",
+    code: "@Environment(\\.dismiss) var dismiss\n@EnvironmentObject var session: Session\n// родитель: ContentView().environmentObject(session)",
+    when: "Общие данные (сессия, тема) для многих экранов.",
+    gotcha: "Забыл .environmentObject() у родителя → краш при обращении.", quiz: "SwiftUI"
+  },
+  {
+    id: "foreach", title: "ForEach и идентификация", phase: "p2",
+    category: "SwiftUI", tags: ["ForEach", "id", "Identifiable", "списки"],
+    summary: "Генерация View из коллекции; элементам нужен стабильный id.",
+    body: "<code>ForEach</code> строит View по коллекции. Элементы должны быть <code>Identifiable</code> или указывать <code>id:</code>. Используется внутри List, VStack, LazyVGrid.",
+    code: "ForEach(races) { race in Text(race.title) }\nForEach(0..<5, id: \\.self) { i in Text(\"\\(i)\") }",
+    when: "Динамические списки/сетки элементов.",
+    gotcha: "Нестабильный id (например индекс при изменяемом массиве) → баги анимаций.", quiz: "SwiftUI"
+  },
+  {
+    id: "sheets-alerts", title: "sheet / alert / confirmationDialog", phase: "p2",
+    category: "SwiftUI", tags: ["sheet", "alert", "модальное", "confirmationDialog"],
+    summary: "Модальные окна и алерты через привязку к состоянию.",
+    body: "Модалки в SwiftUI декларативны: показываются по булевому/опциональному состоянию. <code>.sheet(isPresented:)</code> — выезжающий экран, <code>.alert</code> — алерт, <code>.confirmationDialog</code> — меню действий.",
+    code: "@State private var showSheet = false\nButton(\"Открыть\") { showSheet = true }\n  .sheet(isPresented: $showSheet) { DetailView() }",
+    when: "Детальные экраны, подтверждения, диалоги.",
+    gotcha: "Управляй состоянием, а не вызывай «показать» императивно.", quiz: "SwiftUI"
+  },
+  {
+    id: "tabview", title: "TabView — вкладки", phase: "p2",
+    category: "SwiftUI", tags: ["TabView", "tabItem", "вкладки"],
+    summary: "Нижние вкладки приложения.",
+    body: "<code>TabView</code> создаёт переключаемые вкладки; каждой задаёшь <code>.tabItem</code>. Можно привязать выбранную вкладку к состоянию через <code>selection</code>.",
+    code: "TabView {\n  RacesView().tabItem { Label(\"Гонки\", systemImage: \"flag\") }\n  StatsView().tabItem { Label(\"Статы\", systemImage: \"chart.bar\") }\n}",
+    when: "Главная навигация приложения по разделам.",
+    gotcha: "Каждая вкладка — свой стек навигации (свой NavigationStack).", quiz: "SwiftUI"
+  },
+  {
+    id: "task-modifier", title: ".task и .onAppear (async во View)", phase: "p2",
+    category: "SwiftUI", tags: [".task", ".onAppear", "async", "загрузка"],
+    summary: ".task запускает async-работу при появлении и отменяет при исчезновении.",
+    body: "<code>.task { await ... }</code> — лучший способ запустить асинхронную загрузку при появлении View: автоматически отменяется, когда View исчезает. <code>.onAppear</code> — синхронный аналог для простых действий.",
+    code: "List(vm.races) { ... }\n  .task { await vm.load() }",
+    when: "Загрузка данных при открытии экрана.",
+    gotcha: "Не запускай тяжёлую загрузку в init View — только в .task.", quiz: "SwiftUI"
+  },
+  {
+    id: "appstorage", title: "@AppStorage — настройки в UI", phase: "p2",
+    category: "SwiftUI", tags: ["@AppStorage", "UserDefaults", "настройки"],
+    summary: "Свойство, привязанное к UserDefaults; меняется — View обновляется.",
+    body: "<code>@AppStorage(\"ключ\")</code> связывает свойство с UserDefaults прямо во View. Изменение автоматически перерисовывает UI и сохраняется между запусками.",
+    code: "@AppStorage(\"isDark\") private var isDark = false\nToggle(\"Тёмная тема\", isOn: $isDark)",
+    when: "Простые настройки/флаги, влияющие на UI.",
+    gotcha: "Только для мелких настроек, не для больших данных.", quiz: "SwiftUI"
+  },
+  {
+    id: "asyncimage", title: "AsyncImage — картинки из сети", phase: "p2",
+    category: "SwiftUI", tags: ["AsyncImage", "изображение", "загрузка картинки"],
+    summary: "Загружает и показывает изображение по URL с плейсхолдером.",
+    body: "<code>AsyncImage</code> сам грузит картинку по URL и показывает плейсхолдер во время загрузки. Удобно, но без кэша — для списков берут библиотеки (Kingfisher/Nuke).",
+    code: "AsyncImage(url: URL(string: car.imageURL)) { img in\n  img.resizable()\n} placeholder: { ProgressView() }",
+    when: "Показ удалённых изображений.",
+    gotcha: "Нет встроенного кэша — в длинных списках будет перезагружать.", quiz: "SwiftUI"
+  },
+
+  // ═══ ФАЗА 3 — СЕТЬ/ДАННЫЕ/CONCURRENCY (доп.) ═══
+  {
+    id: "urlrequest-post", title: "POST-запрос (URLRequest)", phase: "p3",
+    category: "Сеть", tags: ["URLRequest", "POST", "headers", "body"],
+    summary: "Ручной запрос: метод, заголовки, тело (JSON).",
+    body: "Для POST/PUT собираешь <code>URLRequest</code>: задаёшь <code>httpMethod</code>, заголовок <code>Content-Type</code>, и тело <code>httpBody</code> (закодированный JSON).",
+    code: "var req = URLRequest(url: url)\nreq.httpMethod = \"POST\"\nreq.setValue(\"application/json\", forHTTPHeaderField: \"Content-Type\")\nreq.httpBody = try JSONEncoder().encode(payload)\nlet (data, _) = try await URLSession.shared.data(for: req)",
+    when: "Отправка данных на сервер (создание/обновление).",
+    gotcha: "Забыл Content-Type → сервер не распарсит JSON.", quiz: "сеть"
+  },
+  {
+    id: "taskgroup", title: "Параллельные задачи: async let / TaskGroup", phase: "p3",
+    category: "Многопоточность", tags: ["async let", "TaskGroup", "параллельно", "concurrency"],
+    summary: "Запустить несколько async-операций одновременно и собрать результаты.",
+    body: "<code>async let</code> запускает задачи параллельно и ждёт их в <code>await</code>. <code>TaskGroup</code> — для динамического числа параллельных задач. Быстрее, чем последовательные await.",
+    code: "async let a = fetchDrivers()\nasync let b = fetchRaces()\nlet (drivers, races) = try await (a, b)",
+    when: "Несколько независимых загрузок сразу.",
+    gotcha: "Если задачи зависят друг от друга — параллелить нельзя.", quiz: "concurrency"
+  },
+  {
+    id: "sendable", title: "Sendable — безопасность между потоками", phase: "p3",
+    category: "Многопоточность", tags: ["Sendable", "data race", "Swift 6", "thread safety"],
+    summary: "Маркер: тип безопасно передавать между потоками/акторами.",
+    body: "<code>Sendable</code> говорит компилятору, что значение безопасно пересекает границы потоков. value-типы из Sendable-полей — Sendable автоматически. В Swift 6 проверка строгая (по умолчанию).",
+    code: "struct Race: Sendable { let id: Int; let title: String }\n// класс с изменяемым стейтом Sendable не является",
+    when: "Передача данных в Task/actor; Swift 6 concurrency.",
+    gotcha: "Класс с var-полями не Sendable — компилятор предупредит.", quiz: "concurrency"
+  },
+  {
+    id: "jsonencoder", title: "Кодирование JSON и даты", phase: "p3",
+    category: "Сеть", tags: ["JSONEncoder", "JSONDecoder", "dateDecodingStrategy", "даты"],
+    summary: "Encode/decode + стратегии для дат и ключей.",
+    body: "<code>JSONEncoder</code>/<code>JSONDecoder</code> настраиваются: <code>keyEncodingStrategy</code> (camelCase↔snake_case), <code>dateDecodingStrategy</code> (например <code>.iso8601</code>). Это решает большинство несовпадений с API.",
+    code: "let dec = JSONDecoder()\ndec.keyDecodingStrategy = .convertFromSnakeCase\ndec.dateDecodingStrategy = .iso8601",
+    when: "API с snake_case ключами или ISO-датами.",
+    gotcha: "Дата как строка не распарсится без правильной стратегии.", quiz: "сеть"
+  },
+  {
+    id: "network-errors", title: "Обработка сетевых ошибок и статусов", phase: "p3",
+    category: "Сеть", tags: ["ошибки сети", "HTTPURLResponse", "statusCode", "обработка"],
+    summary: "Проверяй статус-код и тип ответа, маппи в свои ошибки.",
+    body: "После запроса приведи ответ к <code>HTTPURLResponse</code>, проверь <code>statusCode</code> (2xx — ок), иначе брось свою ошибку. Так UI покажет понятное сообщение вместо краша.",
+    code: "guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode)\nelse { throw APIError.badStatus }",
+    when: "Любой сетевой слой.",
+    gotcha: "Полагаться только на «данные пришли» — ошибка; проверяй статус.", quiz: "сеть"
+  },
+  {
+    id: "coredata", title: "Core Data (обзор vs SwiftData)", phase: "p3",
+    category: "Хранение", tags: ["Core Data", "SwiftData", "persistence", "NSManagedObject"],
+    summary: "Зрелый, мощный фреймворк хранения; SwiftData — обёртка над ним.",
+    body: "Core Data — старый мощный ORM (NSManagedObject, контексты, миграции). <b>SwiftData</b> — современная надстройка с простым API (@Model). На собесах про Core Data спрашивают; в новых проектах берут SwiftData.",
+    code: "// Core Data: NSManagedObjectContext, fetch request, save()\n// SwiftData: @Model + @Query (проще)",
+    when: "Большие/легаси-проекты — Core Data; новое — SwiftData.",
+    gotcha: "Core Data многословна и со своими подводными камнями (контексты/потоки).", quiz: "concurrency"
+  },
+
+  // ═══ ФАЗА 4 — АРХИТЕКТУРА/ТЕСТЫ (доп.) ═══
+  {
+    id: "repository", title: "Repository — слой доступа к данным", phase: "p4",
+    category: "Архитектура", tags: ["Repository", "слой данных", "абстракция"],
+    summary: "Прячет источник данных (сеть/БД) за единым интерфейсом.",
+    body: "Паттерн <b>Repository</b> даёт ViewModel/UseCase единый протокол получения данных, скрывая, откуда они (API, кэш, БД). Легко подменять и тестировать.",
+    code: "protocol RaceRepository { func all() async throws -> [Race] }\nfinal class APIRaceRepository: RaceRepository { /* сеть */ }",
+    when: "Отделение бизнес-логики от источника данных.",
+    gotcha: "Для крошечного приложения может быть избыточно.", quiz: "архитектура"
+  },
+  {
+    id: "singleton", title: "Singleton (и почему осторожно)", phase: "p4",
+    category: "Архитектура", tags: ["Singleton", "shared", "глобальное состояние"],
+    summary: "Один общий экземпляр (.shared). Удобно, но усложняет тесты.",
+    body: "Singleton — единственный экземпляр, доступный через <code>.shared</code>. Подходит для сервисов без состояния. Минус: глобальное состояние, скрытые зависимости, тяжело мокать → используй умеренно + через протокол.",
+    code: "final class Analytics { static let shared = Analytics(); private init() {} }",
+    when: "Редко: сервисы без изменяемого состояния.",
+    gotcha: "Singleton с изменяемым стейтом = скрытые баги и нетестируемость.", quiz: "архитектура"
+  },
+  {
+    id: "factory", title: "Factory — фабрика объектов", phase: "p4",
+    category: "Архитектура", tags: ["Factory", "фабрика", "создание объектов"],
+    summary: "Выносит создание сложных объектов в отдельное место.",
+    body: "Паттерн <b>Factory</b> инкапсулирует логику создания объектов (какой класс, с какими зависимостями). Код-клиент не знает деталей конструирования.",
+    code: "enum ViewFactory {\n  static func makeRaceList() -> some View { RaceListView(vm: .init(api: API())) }\n}",
+    when: "Сборка экранов/объектов с зависимостями (часто с DI).",
+    gotcha: "Не путай с Singleton — фабрика создаёт, не хранит один экземпляр.", quiz: "архитектура"
+  },
+  {
+    id: "observer-pattern", title: "Observer: делегаты vs замыкания vs Combine", phase: "p4",
+    category: "Архитектура", tags: ["Observer", "delegate", "callback", "Combine", "наблюдатель"],
+    summary: "Способы «подписаться на события»: делегат, замыкание, Combine/Published.",
+    body: "Паттерн «наблюдатель» в iOS реализуют по-разному: <b>delegate</b> (1 получатель, UIKit), <b>замыкание-колбэк</b> (просто), <b>Combine/@Published</b> (потоки, много подписчиков), <b>NotificationCenter</b> (широковещательно).",
+    code: "// delegate: weak var delegate: FooDelegate?\n// closure: var onDone: (() -> Void)?\n// Combine: @Published var state",
+    when: "Связь между объектами без жёсткой зависимости.",
+    gotcha: "delegate держи weak — иначе retain cycle.", quiz: "архитектура"
+  },
+  {
+    id: "ui-tests", title: "UI-тесты (XCUITest)", phase: "p4",
+    category: "Тесты", tags: ["UI tests", "XCUITest", "автотесты интерфейса"],
+    summary: "Автотест проходит по экранам как пользователь (тапы, ввод, проверки).",
+    body: "<b>XCUITest</b> запускает приложение и взаимодействует с UI: находит элементы по идентификаторам, тапает, вводит текст, проверяет наличие. Медленнее unit-тестов, но проверяет сценарии целиком.",
+    code: "let app = XCUIApplication(); app.launch()\napp.buttons[\"Старт\"].tap()\nXCTAssertTrue(app.staticTexts[\"Гонка идёт\"].exists)",
+    when: "Критичные пользовательские сценарии.",
+    gotcha: "UI-тесты медленные и хрупкие — покрывай только ключевое.", quiz: "архитектура"
+  },
+  {
+    id: "test-doubles", title: "Тестовые дублёры: mock / stub / spy / fake", phase: "p4",
+    category: "Тесты", tags: ["mock", "stub", "spy", "fake", "тестовые дублёры"],
+    summary: "Подмены зависимостей для изоляции теста.",
+    body: "<b>Stub</b> отдаёт заготовленный ответ. <b>Mock</b> проверяет, что метод вызвали. <b>Spy</b> записывает вызовы. <b>Fake</b> — лёгкая рабочая реализация (например словарь вместо БД). Все подставляются через протокол + DI.",
+    code: "final class StubAPI: API { func fetch() async -> [Race] { [testRace] } }",
+    when: "Изоляция логики от сети/БД в тестах.",
+    gotcha: "Тестируй поведение, а не реализацию (не переусердствуй с mock).", quiz: "архитектура"
+  },
+
+  // ═══ ФАЗА 5 — UIKIT (доп.) ═══
+  {
+    id: "uistackview", title: "UIStackView", phase: "p5",
+    category: "UIKit", tags: ["UIStackView", "stack", "axis", "layout"],
+    summary: "Контейнер авто-раскладки в ряд/столбец — меньше констрейнтов.",
+    body: "<code>UIStackView</code> сам расставляет вложенные вью по оси (<code>axis</code>), с <code>spacing</code>, <code>distribution</code>, <code>alignment</code>. Аналог HStack/VStack — резко сокращает количество констрейнтов.",
+    code: "let stack = UIStackView(arrangedSubviews: [label, button])\nstack.axis = .vertical; stack.spacing = 8",
+    when: "Раскладка группы элементов в ряд/столбец.",
+    gotcha: "Скрытый arrangedSubview (isHidden) убирается из раскладки — это фича.", quiz: "UIKit"
+  },
+  {
+    id: "delegate-pattern", title: "Паттерн delegate (UIKit)", phase: "p5",
+    category: "UIKit", tags: ["delegate", "protocol", "weak", "UIKit"],
+    summary: "Объект делегирует решения другому через протокол. Везде в UIKit.",
+    body: "Делегирование — основа UIKit (UITableViewDelegate, UITextFieldDelegate). Объект объявляет <code>weak var delegate</code> протокольного типа и зовёт его методы на события. Ссылка <b>weak</b>, чтобы избежать retain cycle.",
+    code: "protocol CellDelegate: AnyObject { func didTapLike() }\nweak var delegate: CellDelegate?",
+    when: "Обратная связь от вью/контроллера к владельцу (1 получатель).",
+    gotcha: "Не weak → retain cycle и утечка контроллера.", quiz: "UIKit"
+  },
+  {
+    id: "target-action", title: "Target-Action", phase: "p5",
+    category: "UIKit", tags: ["target-action", "addTarget", "кнопки", "события"],
+    summary: "Связь «контрол → метод» в UIKit (кнопки, свитчи).",
+    body: "Механизм target-action подписывает метод на событие контрола: <code>addTarget(_:action:for:)</code>. Метод помечается <code>@objc</code>. Так работают кнопки, переключатели, слайдеры.",
+    code: "button.addTarget(self, action: #selector(tap), for: .touchUpInside)\n@objc func tap() { print(\"нажато\") }",
+    when: "Обработка нажатий контролов в UIKit.",
+    gotcha: "Метод должен быть @objc, иначе #selector не найдёт его.", quiz: "UIKit"
+  },
+  {
+    id: "navigation-uikit", title: "UINavigationController: push/pop", phase: "p5",
+    category: "UIKit", tags: ["UINavigationController", "push", "pop", "навигация"],
+    summary: "Стек экранов: pushViewController / popViewController.",
+    body: "<code>UINavigationController</code> хранит стек экранов. <code>pushViewController</code> открывает следующий, <code>popViewController</code> возвращает назад. Сверху — навбар с кнопкой Back.",
+    code: "navigationController?.pushViewController(DetailVC(), animated: true)\nnavigationController?.popViewController(animated: true)",
+    when: "Иерархическая навигация в UIKit.",
+    gotcha: "ВьюКонтроллер должен быть внутри nav-стека, иначе navigationController == nil.", quiz: "UIKit"
+  },
+  {
+    id: "storyboard-vs-code", title: "Storyboard vs код (вёрстка UIKit)", phase: "p5",
+    category: "UIKit", tags: ["Storyboard", "XIB", "код", "вёрстка"],
+    summary: "Интерфейс можно собирать визуально (Storyboard/XIB) или кодом.",
+    body: "<b>Storyboard/XIB</b> — визуальный редактор, быстро для прототипа, но конфликты в git и сложнее переиспользовать. <b>Код</b> — многословнее, зато прозрачно, без мерж-конфликтов, легко ревьюить. В командах часто предпочитают код.",
+    code: "// Storyboard: @IBOutlet / @IBAction\n// Код: addSubview + NSLayoutConstraint",
+    when: "Выбор подхода вёрстки в UIKit-проекте.",
+    gotcha: "Storyboard плохо мёржится в команде — частый источник конфликтов.", quiz: "UIKit"
+  },
+  {
+    id: "diffable", title: "Diffable Data Source", phase: "p5",
+    category: "UIKit", tags: ["diffable", "snapshot", "UITableViewDiffableDataSource"],
+    summary: "Современный способ обновлять таблицы/коллекции через снапшоты.",
+    body: "Diffable data source описывает данные снапшотом (секции + элементы), а система сама анимирует разницу. Безопаснее старого reloadData/insertRows (нет крэшей рассинхрона).",
+    code: "var snap = NSDiffableDataSourceSnapshot<Section, Race>()\nsnap.appendSections([.main]); snap.appendItems(races)\ndataSource.apply(snap, animatingDifferences: true)",
+    when: "Современные UITableView/UICollectionView.",
+    gotcha: "Элементы должны быть Hashable и уникальны.", quiz: "UIKit"
+  },
+  {
+    id: "gestures-uikit", title: "UIGestureRecognizer", phase: "p5",
+    category: "UIKit", tags: ["жесты", "gesture", "tap", "swipe", "pan"],
+    summary: "Распознавание жестов: тап, свайп, пан, пинч, лонг-пресс.",
+    body: "Жесты добавляют интерактивность вью: создаёшь распознаватель (например <code>UITapGestureRecognizer</code>) с target-action и вешаешь на view через <code>addGestureRecognizer</code>.",
+    code: "let tap = UITapGestureRecognizer(target: self, action: #selector(onTap))\nimageView.addGestureRecognizer(tap)\nimageView.isUserInteractionEnabled = true",
+    when: "Жесты на произвольных вью (не кнопках).",
+    gotcha: "Для UIImageView/UILabel включи isUserInteractionEnabled.", quiz: "UIKit"
+  },
+  {
+    id: "intrinsic-size", title: "Intrinsic size и приоритеты констрейнтов", phase: "p5",
+    category: "UIKit", tags: ["intrinsic content size", "priority", "hugging", "compression"],
+    summary: "Свой размер вью + приоритеты, кто уступает при конфликте.",
+    body: "Многие вью (label, button) имеют <b>intrinsic content size</b> — естественный размер под контент. При нехватке места конфликт решают приоритеты: <b>content hugging</b> (не растягивать) и <b>compression resistance</b> (не сжимать).",
+    code: "label.setContentHuggingPriority(.required, for: .horizontal)\nlabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)",
+    when: "Тонкая настройка раскладки при конфликтах размеров.",
+    gotcha: "Конфликт без приоритетов → «ambiguous layout» в логах.", quiz: "UIKit"
+  },
+
+  // ═══ ФАЗА 6 — ИНСТРУМЕНТЫ/ДЕБАГ (доп.) ═══
+  {
+    id: "breakpoints-types", title: "Типы breakpoints", phase: "p6",
+    category: "Инструменты", tags: ["breakpoint", "условный", "символьный", "exception"],
+    summary: "Условные, символьные и exception-брейкпоинты экономят время.",
+    body: "Кроме обычной точки останова есть: <b>условный</b> (срабатывает при условии), <b>символьный</b> (на имя метода без захода в файл), <b>exception</b> (ловит крэш в момент возникновения), <b>с действием</b> (логирует и продолжает).",
+    code: "// Exception breakpoint — мгновенно ловит крэш в точке падения\n// Условный: остановиться, если index == 5",
+    when: "Точечная отладка без засорения кода print.",
+    gotcha: "Exception breakpoint — первое, что ставят при необъяснимых крэшах.", quiz: "инструменты"
+  },
+  {
+    id: "swiftlint", title: "Линтеры и SwiftLint", phase: "p6",
+    category: "Инструменты", tags: ["SwiftLint", "линтер", "code style", "качество"],
+    summary: "Авто-проверка стиля и частых ошибок по правилам.",
+    body: "<b>SwiftLint</b> проверяет код на соответствие стилю и ловит запахи (длинные функции, force unwrap и т.д.). Запускается при сборке или в CI, держит код единообразным в команде.",
+    code: "# .swiftlint.yml\nline_length: 120\ndisabled_rules:\n  - todo",
+    when: "Командные проекты, единый стиль.",
+    gotcha: "Слишком строгие правила раздражают — настраивай разумно.", quiz: "инструменты"
+  },
+  {
+    id: "oslog", title: "Логирование: os.Logger", phase: "p6",
+    category: "Инструменты", tags: ["os_log", "Logger", "логи", "Console"],
+    summary: "Системное логирование вместо print — видно в Console, с уровнями.",
+    body: "<code>Logger</code> (os.log) — правильный способ логов: уровни (debug/info/error), категории, не тормозит, виден в приложении Console. В отличие от <code>print</code>, подходит для продакшена.",
+    code: "import OSLog\nlet log = Logger(subsystem: \"app.pitwall\", category: \"net\")\nlog.error(\"Ошибка загрузки: \\(error)\")",
+    when: "Диагностика в реальных сборках.",
+    gotcha: "Не логируй приватные данные открытым текстом.", quiz: "инструменты"
+  },
+  {
+    id: "xcode-previews", title: "Xcode Previews", phase: "p6",
+    category: "Инструменты", tags: ["#Preview", "Preview", "SwiftUI", "превью"],
+    summary: "Живой предпросмотр SwiftUI без запуска приложения.",
+    body: "<code>#Preview</code> рисует View прямо в Xcode и обновляется на лету. Можно показывать разные состояния, тёмную тему, устройства — ускоряет вёрстку в разы.",
+    code: "#Preview {\n  RaceRow(race: .sample)\n    .preferredColorScheme(.dark)\n}",
+    when: "Вёрстка и отладка SwiftUI-экранов.",
+    gotcha: "Тяжёлые зависимости в превью лучше мокать, иначе превью падает.", quiz: "инструменты"
+  },
+  {
+    id: "schemes", title: "Схемы и конфигурации (Debug/Release)", phase: "p6",
+    category: "Инструменты", tags: ["scheme", "configuration", "Debug", "Release", "build"],
+    summary: "Разные сборки: Debug для разработки, Release для релиза/профайла.",
+    body: "<b>Configuration</b> (Debug/Release) задаёт флаги компиляции и оптимизации. <b>Scheme</b> связывает таргеты и действия (Run/Test/Profile/Archive). Часто заводят отдельные конфиги для dev/staging/prod (разные API).",
+    code: "#if DEBUG\nlet baseURL = \"https://dev.api\"\n#else\nlet baseURL = \"https://api\"\n#endif",
+    when: "Разделение dev/prod, профилирование, релиз.",
+    gotcha: "Профилируй в Release — в Debug нет оптимизаций.", quiz: "инструменты"
+  },
+  {
+    id: "ci-cd", title: "CI/CD (GitHub Actions / Xcode Cloud)", phase: "p6",
+    category: "Инструменты", tags: ["CI", "CD", "GitHub Actions", "Xcode Cloud", "fastlane"],
+    summary: "Авто-сборка, тесты и доставка при каждом пуше.",
+    body: "CI/CD автоматизирует: на каждый push гоняются сборка и тесты, на тег — сборка и выгрузка в TestFlight. Инструменты: <b>GitHub Actions</b>, <b>Xcode Cloud</b>, <b>Fastlane</b> (скрипты сборки/деплоя).",
+    code: "# .github/workflows/ci.yml\n# xcodebuild test -scheme App -destination '...'",
+    when: "Командная разработка, регулярные релизы.",
+    gotcha: "Зелёный CI = тесты есть и проходят; без тестов CI почти бесполезен.", quiz: "инструменты"
+  },
+  {
+    id: "proxyman", title: "Отладка сети (Proxyman / Charles)", phase: "p6",
+    category: "Инструменты", tags: ["Proxyman", "Charles", "сеть", "перехват", "debug"],
+    summary: "Перехват и просмотр HTTP-трафика приложения.",
+    body: "<b>Proxyman/Charles</b> работают как прокси и показывают все запросы/ответы приложения: URL, заголовки, тело, статус. Можно подменять ответы (mock). Незаменимо при отладке API.",
+    code: "// Видишь реальный запрос/ответ → сравниваешь с ожидаемым\n// Можно подменить ответ сервера для теста UI",
+    when: "Когда «приложение не то показывает» — смотришь реальный трафик.",
+    gotcha: "Для HTTPS нужно установить и доверять сертификату прокси.", quiz: "инструменты"
+  },
+  {
+    id: "crash-symbolication", title: "Крэш-логи и символикация", phase: "p6",
+    category: "Инструменты", tags: ["crash", "symbolication", "dSYM", "крэш-логи"],
+    summary: "Превратить адреса в крэш-логе в читаемые имена функций.",
+    body: "Крэш-лог содержит стек вызовов в виде адресов. <b>Символикация</b> с помощью <code>.dSYM</code>-файла превращает их в имена функций и строки — так видно, где именно упало. Xcode Organizer и сервисы (Crashlytics) делают это автоматически.",
+    code: "// dSYM сопоставляет адреса ↔ функции/строки\n// Xcode → Organizer → Crashes",
+    when: "Разбор крэшей с устройств/из продакшена.",
+    gotcha: "Потерял dSYM сборки → крэши не символицируются.", quiz: "инструменты"
+  },
+
+  // ═══ ФАЗА 7 — НАЙМ (доп.) ═══
+  {
+    id: "github-profile", title: "GitHub-профиль и README", phase: "p7",
+    category: "Найм", tags: ["GitHub", "профиль", "README", "портфолио"],
+    summary: "Чистый профиль с проектами и понятными README — твоя витрина.",
+    body: "Рекрутёры и тимлиды смотрят GitHub. Нужно: 2–3 закреплённых проекта, у каждого README (что это, стек, скриншоты, как запустить), осмысленные коммиты, регулярная активность. Это весомее слов в резюме.",
+    code: "// README проекта: описание · стек · скриншоты · фичи · запуск",
+    when: "Подготовка к поиску работы.",
+    gotcha: "Пустой профиль или репозитории без README обесценивают портфолио.", quiz: "найм"
+  },
+  {
+    id: "take-home", title: "Тестовое задание", phase: "p7",
+    category: "Найм", tags: ["тестовое", "take-home", "задание"],
+    summary: "Мини-приложение: чистая архитектура, тесты, аккуратный README.",
+    body: "Тестовое часто решает исход. Ценят: рабочее приложение, понятную архитектуру (MVVM), обработку ошибок и загрузки, немного тестов, README с решениями и допущениями. Лучше сделать меньше, но качественно.",
+    code: "// Типичное: список с API + детальный экран + кэш/ошибки",
+    when: "Этап тестового задания на собесе.",
+    gotcha: "«Сделал лишь бы работало» без структуры/README — частый провал.", quiz: "найм"
+  },
+  {
+    id: "system-design-mobile", title: "Мобильный system design (лайт)", phase: "p7",
+    category: "Найм", tags: ["system design", "архитектура приложения", "собес"],
+    summary: "Спроектировать фичу: слои, модель данных, сеть, кэш, состояние.",
+    body: "На мидл-собесах просят спроектировать фичу (лента, чат). Разложи: экраны и состояние (loading/empty/error), слой данных (API + кэш/офлайн), модель, пагинация, обработка ошибок, тестируемость. Рассуждай вслух про компромиссы.",
+    code: "// Лента: API + пагинация + кэш (SwiftData) + состояния UI + ретраи",
+    when: "Мидл-собес, проектирование фич.",
+    gotcha: "Не прыгай в код — сначала требования, состояния и слои.", quiz: "найм"
+  },
+  {
+    id: "behavioral", title: "Поведенческое собеседование (STAR)", phase: "p7",
+    category: "Найм", tags: ["behavioral", "STAR", "soft skills", "софт-скиллы"],
+    summary: "Истории о работе по схеме Ситуация-Задача-Действие-Результат.",
+    body: "На «расскажи о конфликте/сложной задаче» отвечай по <b>STAR</b>: Situation → Task → Action → Result. Конкретика и твой вклад важнее общих слов. Подготовь 3–4 истории заранее (про твою аналитику тоже).",
+    code: "// S: горел дедлайн · T: нужен отчёт · A: что сделал я · R: результат в цифрах",
+    when: "HR/поведенческая часть собеса.",
+    gotcha: "Абстрактные ответы без конкретики и результата не убеждают.", quiz: "найм"
+  },
+  {
+    id: "salary", title: "Зарплатные ожидания и грейды", phase: "p7",
+    category: "Найм", tags: ["зарплата", "грейд", "junior", "переговоры"],
+    summary: "Знай вилку по грейду/региону, называй диапазон уверенно.",
+    body: "Перед собесом изучи вилки junior/middle iOS в твоём регионе (по вакансиям/опросам). Называй диапазон, а не одну цифру; ориентируйся на реальные навыки. Твой бэкграунд (аналитика, английский) — аргумент к верхней границе.",
+    code: "// Junior iOS: смотри актуальные вилки по своему рынку",
+    when: "Обсуждение оффера.",
+    gotcha: "Назвать слишком низко = недополучить; слишком высоко без навыков = отказ.", quiz: "найм"
+  },
+  {
+    id: "portfolio-ideas", title: "Идеи приложений для портфолио", phase: "p7",
+    category: "Найм", tags: ["портфолио", "пет-проект", "идеи"],
+    summary: "Маленькие, но завершённые приложения, показывающие нужные навыки.",
+    body: "Хорошее портфолио-приложение: законченное, с реальным API, кэшем, состояниями и тестами. Идеи под твои интересы: трекер гонок (PitWall), статистика киберспорт-матчей, погода, трекер тренировок. Лучше 2–3 доведённых, чем 10 заброшенных.",
+    code: "// PitWall: календарь + результаты по API + офлайн-кэш + детали",
+    when: "Сбор портфолио к найму.",
+    gotcha: "Незаконченные/без README проекты не работают на тебя.", quiz: "найм"
   }
 ];
 
