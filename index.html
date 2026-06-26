@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🦊 Swift Вики — личный справочник</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1c1e21; --muted: #6b7280;
+    --accent: #f25022; --accent2: #2563eb; --border: #e5e7eb;
+    --code-bg: #f3f4f6; --mark: #ffe58a; --chip: #eef0f3;
+  }
+  [data-theme="dark"] {
+    --bg: #0f1115; --card: #181b21; --text: #e6e8eb; --muted: #9aa3af;
+    --accent: #ff7043; --accent2: #60a5fa; --border: #262b33;
+    --code-bg: #0c0e12; --mark: #7a5d00; --chip: #20242c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; }
+  header { position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 16px; }
+  .top { display: flex; align-items: center; gap: 10px; max-width: 1000px; margin: 0 auto; flex-wrap: wrap; }
+  .logo { font-size: 19px; font-weight: 700; white-space: nowrap; }
+  .logo small { color: var(--muted); font-weight: 400; font-size: 12px; }
+  #search { flex: 1; min-width: 180px; padding: 11px 14px; font-size: 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  #search:focus { outline: 2px solid var(--accent2); border-color: transparent; }
+  .icon-btn { border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 10px; padding: 9px 12px; cursor: pointer; font-size: 16px; }
+  .icon-btn:hover { border-color: var(--accent2); }
+  .toolbar { max-width: 1000px; margin: 10px auto 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip { border: 1px solid var(--border); background: var(--chip); color: var(--text); padding: 5px 11px; border-radius: 999px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+  .chip.active { background: var(--accent2); color: #fff; border-color: transparent; }
+  .chip .c { opacity: .65; font-size: 11px; }
+  .stats { color: var(--muted); font-size: 13px; margin-left: auto; }
+  main { max-width: 1000px; margin: 18px auto 60px; padding: 0 16px; }
+
+  /* dashboard */
+  .dash { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 22px; }
+  .dash-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .dash-head h2 { margin: 0; font-size: 18px; }
+  .dash.collapsed #dashBody { display: none; }
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; text-align: center; }
+  .stat .n { font-size: 21px; font-weight: 700; }
+  .stat .l { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+  /* heatmap */
+  .hm-title { font-size: 13px; color: var(--muted); margin: 4px 0 8px; }
+  .heat-wrap { overflow-x: auto; padding-bottom: 6px; }
+  .heatmap { display: flex; gap: 3px; min-width: min-content; }
+  .hm-col { display: flex; flex-direction: column; gap: 3px; }
+  .hm-cell { width: 13px; height: 13px; border-radius: 3px; background: var(--chip); }
+  .hm-empty { background: transparent; }
+  .hm-l1 { background: #9be9a8; } .hm-l2 { background: #40c463; } .hm-l3 { background: #30a14e; } .hm-l4 { background: #216e39; }
+  .hm-legend { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); margin: 6px 0 16px; }
+  .hm-legend .hm-cell { width: 11px; height: 11px; }
+
+  /* log form */
+  .log-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .cats { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 9px; }
+  .cat { border: 1px solid var(--border); background: var(--chip); color: var(--text); border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+  .cat.active { background: var(--accent2); color: #fff; border-color: transparent; }
+  .log-form { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .log-form input[type=text] { flex: 1; min-width: 180px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--text); font-size: 14px; }
+  .dur { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .dur select { padding: 9px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--text); font-size: 14px; }
+  .btn-primary { background: var(--accent2); color: #fff; border: none; border-radius: 9px; padding: 10px 16px; cursor: pointer; font-size: 14px; }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .log-list { margin-bottom: 16px; max-height: 190px; overflow: auto; }
+  .log-item { display: flex; gap: 10px; align-items: baseline; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .log-item .d { color: var(--accent2); font-weight: 600; white-space: nowrap; }
+  .log-item .m { color: var(--muted); white-space: nowrap; }
+  .log-item .x { margin-left: auto; cursor: pointer; color: var(--muted); }
+
+  /* progress bars */
+  .bars-title { font-size: 13px; color: var(--muted); margin: 6px 0 8px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; font-size: 12.5px; }
+  .bar-row .name { width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar { flex: 1; height: 10px; background: var(--chip); border-radius: 999px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width .3s; }
+  .bar-row .pct { width: 54px; text-align: right; color: var(--muted); }
+
+  /* cards */
+  .phase { margin-bottom: 30px; }
+  .phase-head { border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-bottom: 14px; }
+  .phase-head h2 { font-size: 19px; margin: 0 0 3px; }
+  .phase-desc { color: var(--muted); font-size: 13px; margin: 0 0 9px; }
+  .videos { display: flex; flex-wrap: wrap; gap: 8px; }
+  .video-link { font-size: 12.5px; text-decoration: none; border: 1px solid var(--border); background: var(--chip); color: var(--text); padding: 5px 10px; border-radius: 8px; }
+  .video-link:hover { border-color: var(--accent); color: var(--accent); }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 720px) { .grid { grid-template-columns: 1fr 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; scroll-margin-top: 96px; }
+  .card.flash { animation: flash 1.2s ease; }
+  @keyframes flash { 0%,100% { box-shadow: none; } 30% { box-shadow: 0 0 0 3px var(--accent); } }
+  .card h3 { margin: 0 0 4px; font-size: 17px; }
+  .badge { display: inline-block; font-size: 11px; color: var(--accent2); border: 1px solid var(--accent2); border-radius: 6px; padding: 1px 7px; margin-right: 6px; }
+  .star { float: right; cursor: pointer; font-size: 18px; opacity: .4; user-select: none; }
+  .star.on { opacity: 1; }
+  .summary { color: var(--muted); margin: 6px 0 10px; font-size: 14px; }
+  .body { font-size: 14.5px; }
+  .body code, .callout code, .summary code { background: var(--code-bg); padding: 1px 5px; border-radius: 5px; font-size: 13px; }
+  pre.code { background: var(--code-bg); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; margin: 10px 0; }
+  .callout { font-size: 13.5px; border-left: 3px solid; padding: 6px 10px; border-radius: 0 8px 8px 0; margin: 8px 0; }
+  .when { border-color: #16a34a; background: rgba(22,163,74,.08); }
+  .gotcha { border-color: var(--accent); background: rgba(242,80,34,.08); }
+  .quiz-hint { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+  .quiz-hint b { color: var(--accent2); }
+  mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2px; }
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; }
+  footer { text-align: center; color: var(--muted); font-size: 12.5px; padding: 0 16px 40px; }
+  kbd { background: var(--chip); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 11px; }
+  a { color: var(--accent2); }
+
+  /* mobile */
+  @media (max-width: 640px) {
+    #search { order: 5; flex-basis: 100%; }
+    .logo { font-size: 17px; }
+    .stat-row { grid-template-columns: 1fr 1fr; }
+    .bar-row .name { width: 116px; }
+    .dash, .card { padding: 14px 14px; }
+    main { margin-top: 14px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div class="logo">🦊 Swift Вики <small>справочник</small></div>
+    <input id="search" type="search" placeholder="Поиск: опционал, weak, async, MVVM, SQL…  (/)" autocomplete="off" autofocus>
+    <button class="icon-btn" id="random" title="Случайная карточка">🎲</button>
+    <button class="icon-btn" id="theme" title="Тема">🌙</button>
+  </div>
+  <div class="toolbar" id="chips"></div>
+</header>
+
+<main>
+  <section class="dash" id="dashboard">
+    <div class="dash-head">
+      <h2>📊 Мой прогресс</h2>
+      <button class="icon-btn" id="dashToggle">свернуть</button>
+    </div>
+    <div id="dashBody">
+      <div class="stat-row" id="statRow"></div>
+
+      <div class="hm-title">📅 Активность по дням (как на GitHub):</div>
+      <div class="heat-wrap"><div class="heatmap" id="heatmap"></div></div>
+      <div class="hm-legend">меньше
+        <span class="hm-cell hm-l0"></span><span class="hm-cell hm-l1"></span><span class="hm-cell hm-l2"></span><span class="hm-cell hm-l3"></span><span class="hm-cell hm-l4"></span>
+        больше</div>
+
+      <div class="log-title">Чем занимался сегодня?</div>
+      <div class="cats" id="cats"></div>
+      <div class="log-form">
+        <input id="logNote" type="text" placeholder="Комментарий: что именно изучил/сделал (необязательно)">
+        <span class="dur">⏱ <select id="logDur">
+          <option>15</option><option>30</option><option>45</option>
+          <option selected>60</option><option>90</option><option>120</option><option>180</option>
+        </select> мин</span>
+        <button class="btn-primary" id="logAdd">Добавить</button>
+      </div>
+      <div class="log-list" id="logList"></div>
+
+      <div class="bars-title">Прогресс по фазам (выучено карточек ⭐):</div>
+      <div id="bars"></div>
+    </div>
+  </section>
+
+  <div id="results"></div>
+  <div class="empty" id="empty" hidden>Ничего не найдено. Попробуй другое слово или сбрось фильтр.</div>
+</main>
+
+<footer>
+  <kbd>/</kbd> поиск · <kbd>Esc</kbd> очистить · ⭐ «выучено» · 🎥 в шапке блока — видео<br>
+  📱 Доступно с телефона · исходник: <a href="https://github.com/tra1nee/swift-wiki" target="_blank" rel="noopener">github.com/tra1nee/swift-wiki</a>
+</footer>
+
+<script src="data.js"></script>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const results = $("#results"), empty = $("#empty"), chipsBox = $("#chips"), searchEl = $("#search");
+
+  let state = {
+    q: "",
+    phase: "all",
+    onlyUnlearned: false,
+    learned: new Set(JSON.parse(localStorage.getItem("wiki.learned") || "[]"))
+  };
+
+  // ── тема ──
+  function applyTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    $("#theme").textContent = t === "dark" ? "☀️" : "🌙";
+    localStorage.setItem("wiki.theme", t);
+  }
+  applyTheme(localStorage.getItem("wiki.theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+  $("#theme").onclick = () => applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+
+  // ── утилиты ──
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const stripTags = (s) => s.replace(/<[^>]+>/g, " ");
+  function highlight(text, terms) {
+    let out = esc(text);
+    for (const t of terms) {
+      if (!t) continue;
+      const re = new RegExp("(" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "gi");
+      out = out.replace(re, "<mark>$1</mark>");
+    }
+    return out;
+  }
+
+  // ── чипы (фазы) ──
+  function buildChips() {
+    const mk = (id, label, count, active) => `<div class="chip ${active ? "active" : ""}" data-phase="${id}">${label} <span class="c">${count}</span></div>`;
+    let html = mk("all", "Все", WIKI_DATA.length, state.phase === "all");
+    for (const p of PHASES) {
+      const n = WIKI_DATA.filter(e => e.phase === p.id).length;
+      if (n) html += mk(p.id, p.title.replace(/^[^ ]+ /, ""), n, state.phase === p.id);
+    }
+    html += `<div class="stats" id="stats"></div>`;
+    chipsBox.innerHTML = html;
+    chipsBox.querySelectorAll("[data-phase]").forEach(el => el.onclick = () => { state.phase = el.dataset.phase; render(); });
+  }
+
+  // ── фильтрация ──
+  function matchesEntry(e, terms) {
+    if (state.phase !== "all" && e.phase !== state.phase) return false;
+    if (!terms.length) return true;
+    const hay = [e.title, e.summary, stripTags(e.body), e.tags.join(" "), e.code, e.category].join(" ").toLowerCase();
+    return terms.every(t => hay.includes(t));
+  }
+
+  // ── карточка ──
+  function cardHTML(e, terms) {
+    const on = state.learned.has(e.id);
+    return `<div class="card" id="card-${e.id}">
+      <span class="star ${on ? "on" : ""}" data-star="${e.id}" title="Отметить выученным">${on ? "⭐" : "☆"}</span>
+      <h3>${highlight(e.title, terms)}</h3>
+      <div><span class="badge">${esc(e.category)}</span></div>
+      <div class="summary">${highlight(e.summary, terms)}</div>
+      <div class="body">${e.body}</div>
+      <pre class="code">${esc(e.code)}</pre>
+      <div class="callout when">✅ <b>Когда:</b> ${e.when}</div>
+      <div class="callout gotcha">⚠️ <b>Подвох:</b> ${e.gotcha}</div>
+      <div class="quiz-hint">🎮 Проверить себя: напиши мне <b>матч: ${esc(e.quiz)}</b></div>
+    </div>`;
+  }
+
+  function videosHTML(p) {
+    if (!p.videos || !p.videos.length) return "";
+    return `<div class="videos">` + p.videos.map(v => `<a class="video-link" href="${v.url}" target="_blank" rel="noopener">${esc(v.label)}</a>`).join("") + `</div>`;
+  }
+
+  function render() {
+    buildChips();
+    const terms = state.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    let shown = 0, html = "";
+    for (const p of PHASES) {
+      if (state.phase !== "all" && state.phase !== p.id) continue;
+      const items = WIKI_DATA.filter(e => e.phase === p.id && matchesEntry(e, terms));
+      if (!items.length) continue;
+      shown += items.length;
+      html += `<section class="phase">
+        <div class="phase-head"><h2>${esc(p.title)}</h2><p class="phase-desc">${esc(p.desc || "")}</p>${videosHTML(p)}</div>
+        <div class="grid">${items.map(e => cardHTML(e, terms)).join("")}</div>
+      </section>`;
+    }
+    results.innerHTML = html;
+    empty.hidden = shown > 0;
+    $("#stats").textContent = `${shown} из ${WIKI_DATA.length}`;
+    results.querySelectorAll("[data-star]").forEach(el => el.onclick = () => toggleLearned(el.dataset.star));
+  }
+
+  function toggleLearned(id) {
+    state.learned.has(id) ? state.learned.delete(id) : state.learned.add(id);
+    localStorage.setItem("wiki.learned", JSON.stringify([...state.learned]));
+    render();
+    renderDashboard();
+  }
+
+  // ── поиск ──
+  let t;
+  searchEl.oninput = () => { clearTimeout(t); t = setTimeout(() => { state.q = searchEl.value; render(); }, 90); };
+
+  // ── случайная ──
+  $("#random").onclick = () => {
+    const terms = state.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const list = WIKI_DATA.filter(e => matchesEntry(e, terms));
+    if (!list.length) return;
+    const pick = list[Math.floor(Math.random() * list.length)];
+    if (state.phase !== "all" && pick.phase !== state.phase) { state.phase = "all"; render(); }
+    const node = $("#card-" + pick.id);
+    if (node) { node.scrollIntoView({ behavior: "smooth", block: "center" }); node.classList.remove("flash"); void node.offsetWidth; node.classList.add("flash"); }
+  };
+
+  // ── клавиши ──
+  document.addEventListener("keydown", (ev) => {
+    if ((ev.key === "/" || (ev.key.toLowerCase() === "k" && (ev.metaKey || ev.ctrlKey))) && document.activeElement !== searchEl) {
+      ev.preventDefault(); searchEl.focus(); searchEl.select();
+    } else if (ev.key === "Escape" && document.activeElement === searchEl) {
+      searchEl.value = ""; state.q = ""; render(); searchEl.blur();
+    }
+  });
+
+  // ════════ ДАШБОРД ════════
+  const CATS = [
+    { id: "theory", label: "📖 Теория" },
+    { id: "practice", label: "💻 Практика" },
+    { id: "video", label: "🎥 Видео" },
+    { id: "quiz", label: "🎮 Квиз" },
+    { id: "project", label: "🛠️ Проект" }
+  ];
+  let selectedCat = localStorage.getItem("wiki.lastCat") || "theory";
+  const LOG_KEY = "wiki.log";
+  let logData = JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
+  const ymd = (d) => { const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), da = String(d.getDate()).padStart(2, "0"); return `${y}-${m}-${da}`; };
+  const saveLog = () => localStorage.setItem(LOG_KEY, JSON.stringify(logData));
+  const catLabel = (id) => (CATS.find(c => c.id === id) || { label: id || "—" }).label;
+
+  function renderCats() {
+    $("#cats").innerHTML = CATS.map(c => `<span class="cat ${c.id === selectedCat ? "active" : ""}" data-cat="${c.id}">${c.label}</span>`).join("");
+    $("#cats").querySelectorAll("[data-cat]").forEach(el => el.onclick = () => { selectedCat = el.dataset.cat; localStorage.setItem("wiki.lastCat", selectedCat); renderCats(); });
+  }
+
+  function computeStreak() {
+    const set = new Set(logData.map(e => e.date));
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let d = new Date(today);
+    if (!set.has(ymd(d))) { d.setDate(d.getDate() - 1); if (!set.has(ymd(d))) return { streak: 0, todayDone: false }; }
+    let s = 0;
+    while (set.has(ymd(d))) { s++; d.setDate(d.getDate() - 1); }
+    return { streak: s, todayDone: set.has(ymd(today)) };
+  }
+
+  function renderHeatmap() {
+    const mins = {};
+    for (const e of logData) mins[e.date] = (mins[e.date] || 0) + (Number(e.minutes) || 0);
+    const weeks = 18;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const dow = (d) => (d.getDay() + 6) % 7; // Пн=0 … Вс=6
+    let start = new Date(today);
+    start.setDate(start.getDate() - (weeks * 7 - 1));
+    start.setDate(start.getDate() - dow(start));
+    const level = (m) => m === 0 ? 0 : m < 30 ? 1 : m < 60 ? 2 : m < 120 ? 3 : 4;
+    let cur = new Date(start), cols = "";
+    while (cur <= today) {
+      let cells = "";
+      for (let r = 0; r < 7; r++) {
+        if (cur > today) { cells += `<span class="hm-cell hm-empty"></span>`; }
+        else { const ds = ymd(cur), m = mins[ds] || 0; cells += `<span class="hm-cell hm-l${level(m)}" title="${ds}: ${m} мин"></span>`; }
+        cur.setDate(cur.getDate() + 1);
+      }
+      cols += `<div class="hm-col">${cells}</div>`;
+    }
+    $("#heatmap").innerHTML = cols;
+  }
+
+  function renderDashboard() {
+    const days = new Set(logData.map(e => e.date)).size;
+    const mins = logData.reduce((a, e) => a + (Number(e.minutes) || 0), 0);
+    const { streak, todayDone } = computeStreak();
+    $("#statRow").innerHTML = `
+      <div class="stat"><div class="n">🔥 ${streak}</div><div class="l">дней подряд${todayDone ? " · сегодня ✅" : ""}</div></div>
+      <div class="stat"><div class="n">${days}</div><div class="l">всего дней занятий</div></div>
+      <div class="stat"><div class="n">${(mins / 60).toFixed(1)} ч</div><div class="l">всего времени</div></div>
+      <div class="stat"><div class="n">${state.learned.size}/${WIKI_DATA.length}</div><div class="l">выучено карточек</div></div>`;
+
+    $("#logList").innerHTML = logData.length
+      ? logData.map((e, i) => ({ e, i })).reverse().map(({ e, i }) =>
+          `<div class="log-item"><span class="d">${esc(e.date)}</span><span class="m">${esc(catLabel(e.cat))} · ${Number(e.minutes) || 0} мин</span><span>${esc(e.note || "")}</span><span class="x" data-del="${i}" title="Удалить">✕</span></div>`).join("")
+      : `<div style="color:var(--muted);font-size:13px">Пока пусто — отметь первое занятие 👆</div>`;
+    $("#logList").querySelectorAll("[data-del]").forEach(el => el.onclick = () => { logData.splice(Number(el.dataset.del), 1); saveLog(); renderDashboard(); });
+
+    let bars = "";
+    for (const p of PHASES) {
+      const tot = WIKI_DATA.filter(e => e.phase === p.id).length; if (!tot) continue;
+      const lr = WIKI_DATA.filter(e => e.phase === p.id && state.learned.has(e.id)).length;
+      bars += `<div class="bar-row"><span class="name">${esc(p.title)}</span><span class="bar"><span style="width:${Math.round(lr / tot * 100)}%"></span></span><span class="pct">${lr}/${tot}</span></div>`;
+    }
+    const pctAll = Math.round(state.learned.size / WIKI_DATA.length * 100);
+    bars += `<div class="bar-row"><span class="name"><b>Итого</b></span><span class="bar"><span style="width:${pctAll}%"></span></span><span class="pct">${pctAll}%</span></div>`;
+    $("#bars").innerHTML = bars;
+
+    renderHeatmap();
+  }
+
+  $("#logAdd").onclick = () => {
+    logData.push({ date: ymd(new Date()), cat: selectedCat, minutes: Number($("#logDur").value) || 0, note: $("#logNote").value.trim() });
+    saveLog(); $("#logNote").value = ""; renderDashboard();
+  };
+  $("#logNote").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#logAdd").click(); });
+
+  const dashEl = $("#dashboard");
+  if (localStorage.getItem("wiki.dashCollapsed") === "1") dashEl.classList.add("collapsed");
+  const updateDashToggle = () => $("#dashToggle").textContent = dashEl.classList.contains("collapsed") ? "развернуть" : "свернуть";
+  $("#dashToggle").onclick = () => { dashEl.classList.toggle("collapsed"); localStorage.setItem("wiki.dashCollapsed", dashEl.classList.contains("collapsed") ? "1" : "0"); updateDashToggle(); };
+  updateDashToggle();
+
+  renderCats();
+  render();
+  renderDashboard();
+</script>
+</body>
+</html>
