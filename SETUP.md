@@ -4,7 +4,7 @@
 
 ## Шаги в консоли Firebase
 
-1. Зайди на **https://console.firebase.google.com** → **Add project** (имя любое, напр. `swift-wiki`). Google Analytics можно отключить.
+1. Зайди на **https://console.firebase.google.com** → **Add project** (а если это твой первый проект — большая карточка **«Get started by setting up a Firebase project»**). Имя любое, напр. `swift-wiki`. Google Analytics можно отключить.
 2. **Build → Authentication → Get started → Sign-in method → Google → Enable → Save.**
 3. **Authentication → Settings → Authorized domains → Add domain** → добавь `tra1nee.github.io` (домен `localhost` обычно уже в списке).
 4. **Build → Firestore Database → Create database → Production mode** → выбери регион (например `eur3`).
@@ -22,7 +22,7 @@ service cloud.firestore {
 ```
 > Эти правила = «каждый читает/пишет только свой документ». Чужие данные недоступны.
 
-6. **⚙️ Project settings → General → Your apps → Web (`</>`)** → зарегистрируй приложение (nickname любой) → скопируй объект **firebaseConfig**.
+6. **⚙️ Project settings → General → Your apps.** Раздел пустой — нажми иконку **Web `</>`** (среди iOS/Android/Web/Flutter). Введи nickname (напр. `swift-wiki-web`), **галочку «Also set up Firebase Hosting» НЕ ставь** → **Register app**. После регистрации появится блок с `const firebaseConfig = {...}` — это он. (Потом конфиг всегда там же → твоё web-app → SDK setup and configuration → Config.)
 
 ## Вставь конфиг
 
