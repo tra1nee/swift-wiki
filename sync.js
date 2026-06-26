@@ -38,8 +38,11 @@ if (enabled) {
       }
     };
     window.WikiSync.signOut = () => signOut(auth);
-    // Завершаем вход после возврата с redirect (мобильные)
-    getRedirectResult(auth).catch(e => console.warn("sync: redirect result", e));
+    // Завершаем вход после возврата с redirect (мобильные) + показываем точный код ошибки
+    getRedirectResult(auth).catch(e => {
+      console.warn("sync: redirect result", e);
+      if (e && e.code) alert("Ошибка входа (" + e.code + "): " + (e.message || ""));
+    });
     window.WikiSync.save = async (data) => {
       const u = auth.currentUser; if (!u) return;
       try { await setDoc(doc(db, "users", u.uid), { ...data, updatedAt: Date.now() }); }
