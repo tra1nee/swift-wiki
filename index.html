@@ -160,6 +160,7 @@
       <div class="cats" id="cats"></div>
       <div class="log-form">
         <input id="logNote" type="text" placeholder="Комментарий: что именно изучил/сделал (необязательно)">
+        <span class="dur">📅 <select id="logDay"><option value="0">Сегодня</option><option value="1">Вчера</option></select></span>
         <span class="dur">⏱ <select id="logDur">
           <option>15</option><option>30</option><option>45</option>
           <option selected>60</option><option>90</option><option>120</option><option>180</option>
@@ -394,7 +395,9 @@
   }
 
   $("#logAdd").onclick = () => {
-    logData.push({ date: ymd(new Date()), cat: selectedCat, minutes: Number($("#logDur").value) || 0, note: $("#logNote").value.trim() });
+    const off = Number($("#logDay").value) || 0;          // 0 = сегодня, 1 = вчера
+    const dt = new Date(); dt.setDate(dt.getDate() - off);
+    logData.push({ date: ymd(dt), cat: selectedCat, minutes: Number($("#logDur").value) || 0, note: $("#logNote").value.trim() });
     saveLog(); $("#logNote").value = ""; renderDashboard(); pushCloud();
   };
   $("#logNote").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#logAdd").click(); });
@@ -449,6 +452,14 @@
   window.addEventListener("wiki-signed-in", (e) => { updateSyncUI(e.detail.user); mergeCloud(e.detail.cloud); });
   window.addEventListener("wiki-signed-out", () => updateSyncUI(null));
 
+  function fillDayOptions() {
+    const sel = $("#logDay"); if (!sel) return;
+    const fmt = (off) => { const d = new Date(); d.setDate(d.getDate() - off); return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0"); };
+    sel.options[0].text = "Сегодня (" + fmt(0) + ")";
+    sel.options[1].text = "Вчера (" + fmt(1) + ")";
+  }
+
+  fillDayOptions();
   renderCats();
   render();
   renderDashboard();
