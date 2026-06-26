@@ -7,7 +7,7 @@
 //  только владельцу (см. правила в SETUP.md). У других — свой uid → свой прогресс.
 // ─────────────────────────────────────────────────────────────
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -24,9 +24,22 @@ if (enabled) {
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
-    window.WikiSync.signIn = () =>
-      signInWithPopup(auth, provider).catch(e => alert("Не удалось войти: " + e.message));
+    // На мобильных/in-app браузерах popup часто не работает ("the requested action is invalid"),
+    // поэтому там используем redirect; на десктопе — popup с откатом на redirect.
+    const isMobile = (window.matchMedia && matchMedia("(pointer: coarse)").matches)
+      || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    window.WikiSync.signIn = async () => {
+      try {
+        if (isMobile) { await signInWithRedirect(auth, provider); return; }
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        try { await signInWithRedirect(auth, provider); }
+        catch (e2) { alert("Не удалось войти: " + (e2.code || e2.message)); }
+      }
+    };
     window.WikiSync.signOut = () => signOut(auth);
+    // Завершаем вход после возврата с redirect (мобильные)
+    getRedirectResult(auth).catch(e => console.warn("sync: redirect result", e));
     window.WikiSync.save = async (data) => {
       const u = auth.currentUser; if (!u) return;
       try { await setDoc(doc(db, "users", u.uid), { ...data, updatedAt: Date.now() }); }

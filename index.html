@@ -118,6 +118,12 @@
   .btn-ghost:hover { background: var(--accent2); color: #fff; }
   .link-btn { background: none; border: none; color: var(--accent2); cursor: pointer; font-size: 13px; padding: 0; text-decoration: underline; }
 
+  /* фиксы переполнения по ширине (особенно на мобильных) */
+  html, body { max-width: 100%; overflow-x: hidden; }
+  .card { min-width: 0; }
+  pre.code { max-width: 100%; }
+  .summary, .body, .callout, .quiz-hint, .phase-desc, .log-item span { overflow-wrap: anywhere; word-break: break-word; }
+
   /* mobile */
   @media (max-width: 640px) {
     #search { order: 5; flex-basis: 100%; }
