@@ -110,6 +110,14 @@
   kbd { background: var(--chip); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 11px; }
   a { color: var(--accent2); }
 
+  /* sync */
+  .sync-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 14px; flex-wrap: wrap; }
+  .sync-row .ok { color: #16a34a; font-weight: 600; }
+  .sync-row .off { color: var(--muted); }
+  .btn-ghost { border: 1px solid var(--accent2); color: var(--accent2); background: transparent; border-radius: 9px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
+  .btn-ghost:hover { background: var(--accent2); color: #fff; }
+  .link-btn { background: none; border: none; color: var(--accent2); cursor: pointer; font-size: 13px; padding: 0; text-decoration: underline; }
+
   /* mobile */
   @media (max-width: 640px) {
     #search { order: 5; flex-basis: 100%; }
@@ -139,6 +147,7 @@
       <button class="icon-btn" id="dashToggle">свернуть</button>
     </div>
     <div id="dashBody">
+      <div class="sync-row" id="syncRow"></div>
       <div class="stat-row" id="statRow"></div>
 
       <div class="hm-title">📅 Активность по дням (как на GitHub):</div>
@@ -173,6 +182,7 @@
   📱 Доступно с телефона · исходник: <a href="https://github.com/tra1nee/swift-wiki" target="_blank" rel="noopener">github.com/tra1nee/swift-wiki</a>
 </footer>
 
+<script src="firebase-config.js"></script>
 <script src="data.js"></script>
 <script>
   const $ = (s) => document.querySelector(s);
@@ -274,6 +284,7 @@
     localStorage.setItem("wiki.learned", JSON.stringify([...state.learned]));
     render();
     renderDashboard();
+    pushCloud();
   }
 
   // ── поиск ──
@@ -317,7 +328,7 @@
 
   function renderCats() {
     $("#cats").innerHTML = CATS.map(c => `<span class="cat ${c.id === selectedCat ? "active" : ""}" data-cat="${c.id}">${c.label}</span>`).join("");
-    $("#cats").querySelectorAll("[data-cat]").forEach(el => el.onclick = () => { selectedCat = el.dataset.cat; localStorage.setItem("wiki.lastCat", selectedCat); renderCats(); });
+    $("#cats").querySelectorAll("[data-cat]").forEach(el => el.onclick = () => { selectedCat = el.dataset.cat; localStorage.setItem("wiki.lastCat", selectedCat); renderCats(); pushCloud(); });
   }
 
   function computeStreak() {
@@ -367,7 +378,7 @@
       ? logData.map((e, i) => ({ e, i })).reverse().map(({ e, i }) =>
           `<div class="log-item"><span class="d">${esc(e.date)}</span><span class="m">${esc(catLabel(e.cat))} · ${Number(e.minutes) || 0} мин</span><span>${esc(e.note || "")}</span><span class="x" data-del="${i}" title="Удалить">✕</span></div>`).join("")
       : `<div style="color:var(--muted);font-size:13px">Пока пусто — отметь первое занятие 👆</div>`;
-    $("#logList").querySelectorAll("[data-del]").forEach(el => el.onclick = () => { logData.splice(Number(el.dataset.del), 1); saveLog(); renderDashboard(); });
+    $("#logList").querySelectorAll("[data-del]").forEach(el => el.onclick = () => { logData.splice(Number(el.dataset.del), 1); saveLog(); renderDashboard(); pushCloud(); });
 
     let bars = "";
     for (const p of PHASES) {
@@ -384,7 +395,7 @@
 
   $("#logAdd").onclick = () => {
     logData.push({ date: ymd(new Date()), cat: selectedCat, minutes: Number($("#logDur").value) || 0, note: $("#logNote").value.trim() });
-    saveLog(); $("#logNote").value = ""; renderDashboard();
+    saveLog(); $("#logNote").value = ""; renderDashboard(); pushCloud();
   };
   $("#logNote").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#logAdd").click(); });
 
@@ -394,9 +405,55 @@
   $("#dashToggle").onclick = () => { dashEl.classList.toggle("collapsed"); localStorage.setItem("wiki.dashCollapsed", dashEl.classList.contains("collapsed") ? "1" : "0"); updateDashToggle(); };
   updateDashToggle();
 
+  // ════════ СИНХРОНИЗАЦИЯ (Firebase) ════════
+  function pushCloud() {
+    const S = window.WikiSync;
+    if (!S || !S.enabled || !S._user) return;
+    clearTimeout(pushCloud._t);
+    pushCloud._t = setTimeout(() => S.save({ learned: [...state.learned], log: logData, lastCat: selectedCat }), 600);
+  }
+  function updateSyncUI(user) {
+    const S = window.WikiSync || { enabled: false };
+    const row = $("#syncRow"); if (!row) return;
+    if (!S.enabled) {
+      row.innerHTML = `<span class="off">☁️ Синхронизация выключена — данные только на этом устройстве. <a href="https://github.com/tra1nee/swift-wiki/blob/main/SETUP.md" target="_blank" rel="noopener">как включить</a></span>`;
+      return;
+    }
+    user = user || S._user;
+    if (user) {
+      row.innerHTML = `<span class="ok">☁️ Синхронизировано</span> · <span>${esc(user.email || user.displayName || "вы")}</span> · <button class="link-btn" id="signOutBtn">выйти</button>`;
+      $("#signOutBtn").onclick = () => S.signOut();
+    } else {
+      row.innerHTML = `<button class="btn-ghost" id="signInBtn">☁️ Войти через Google для синхронизации</button>`;
+      $("#signInBtn").onclick = () => S.signIn();
+    }
+  }
+  function mergeCloud(cloud) {
+    if (cloud) {
+      const merged = new Set(cloud.learned || []);
+      for (const id of state.learned) merged.add(id);
+      state.learned = merged;
+      localStorage.setItem("wiki.learned", JSON.stringify([...merged]));
+      const sig = (e) => `${e.date}|${e.cat}|${e.minutes}|${e.note}`;
+      const map = new Map();
+      for (const e of (cloud.log || [])) map.set(sig(e), e);
+      for (const e of logData) map.set(sig(e), e);
+      logData = [...map.values()].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+      saveLog();
+      if (cloud.lastCat) { selectedCat = cloud.lastCat; localStorage.setItem("wiki.lastCat", selectedCat); }
+    }
+    render(); renderCats(); renderDashboard();
+    pushCloud();
+  }
+  window.addEventListener("wiki-sync-ready", () => updateSyncUI());
+  window.addEventListener("wiki-signed-in", (e) => { updateSyncUI(e.detail.user); mergeCloud(e.detail.cloud); });
+  window.addEventListener("wiki-signed-out", () => updateSyncUI(null));
+
   renderCats();
   render();
   renderDashboard();
+  updateSyncUI();
 </script>
+<script type="module" src="sync.js"></script>
 </body>
 </html>
