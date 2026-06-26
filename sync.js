@@ -24,17 +24,21 @@ if (enabled) {
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
-    // На мобильных/in-app браузерах popup часто не работает ("the requested action is invalid"),
-    // поэтому там используем redirect; на десктопе — popup с откатом на redirect.
-    const isMobile = (window.matchMedia && matchMedia("(pointer: coarse)").matches)
-      || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    // Popup надёжнее redirect и на мобильных: redirect на схеме «сайт на одном домене +
+    // auth-handler на firebaseapp.com» ломается из-за блокировки сторонних cookie/хранилища
+    // (страница входа открывается и сразу закрывается). Popup возвращает результат через
+    // postMessage, поэтому работает. Redirect оставляем только как запасной вариант.
     window.WikiSync.signIn = async () => {
       try {
-        if (isMobile) { await signInWithRedirect(auth, provider); return; }
         await signInWithPopup(auth, provider);
       } catch (e) {
-        try { await signInWithRedirect(auth, provider); }
-        catch (e2) { alert("Не удалось войти: " + (e2.code || e2.message)); }
+        const code = (e && e.code) || "";
+        if (/popup|cancelled|operation-not-supported/i.test(code)) {
+          try { await signInWithRedirect(auth, provider); }
+          catch (e2) { alert("Не удалось войти: " + (e2.code || e2.message)); }
+        } else {
+          alert("Не удалось войти (" + code + "): " + (e.message || ""));
+        }
       }
     };
     window.WikiSync.signOut = () => signOut(auth);

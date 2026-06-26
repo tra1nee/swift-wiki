@@ -53,11 +53,13 @@ git add firebase-config.js && git commit -m "включить синхрониз
 
 > Локальная версия (файл `index.html` через `file://`) синхронизироваться не будет — вход Google работает на live-сайте https://tra1nee.github.io/swift-wiki/ . Для синхронизации между устройствами пользуйся им.
 >
-> На телефоне вход идёт через **redirect** (перебрасывает на страницу Google и обратно) — это нормально, popup на мобильных не работает.
+> Вход везде через **popup** (откроется окно Google и вернёт результат). Если браузер заблокировал попап — сработает запасной redirect.
 
 ## 🛠️ Если вход не работает
 
-- **«The requested action is invalid» / попап не открывается** — это про мобильный popup; теперь там redirect. Главное — проверь, что в **Authentication → Settings → Authorized domains** есть `tra1nee.github.io`.
+- **Страница Google открывается и сразу закрывается, возвращает без входа** — так ломается redirect на мобильных из-за блокировки сторонних cookie. Теперь вход через popup — обнови сайт. Если попап блокируется — разреши всплывающие окна для сайта.
+- **«The requested action is invalid» сразу на сайте** — обычно ограничение API-ключа в Google Cloud. Сними его (Application restrictions → None), см. ниже.
+- Проверь, что в **Authentication → Settings → Authorized domains** есть `tra1nee.github.io`.
 - **`auth/unauthorized-domain`** — домен не добавлен в Authorized domains (шаг 3).
 - **«Missing or insufficient permissions»** при сохранении — не опубликованы правила Firestore (шаг 5).
 - **Вход уходит на Google и возвращается без результата** — если ты ограничивал API-ключ в Google Cloud (HTTP referrer), это может ломать авторизацию. Сними ограничение либо добавь в разрешённые и свой домен, и `*.firebaseapp.com`.
